@@ -11,6 +11,9 @@ export const User = neo4j()?.model("user", {
     surname: {
         type: "string"
     },
+    coin: {
+        type: "number"
+    },
     email: {
         type: "string"
     },
