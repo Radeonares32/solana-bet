@@ -1,57 +1,103 @@
 import {
-    Keypair,
     Connection,
-    PublicKey,
+    Keypair,
     LAMPORTS_PER_SOL,
-    TransactionInstruction,
+    PublicKey,
+    sendAndConfirmTransaction,
+    SystemProgram,
     Transaction,
-    sendAndConfirmTransaction
-}
-    from '@solana/web3.js'
-import fs from 'mz/fs'
-import path from 'path'
+    TransactionInstruction,
+} from '@solana/web3.js';
+import {readFileSync} from "fs";
+import path from 'path';
 
-const PROGRAM_KEYPAIR_PATH = path.join(
-    path.resolve(__dirname, '../../dist/program'),
-    'program-keypair.json'
-)
-async function main() {
-    console.log("launch client")
-    let connection = new Connection('https://api.devnet.solana.com', 'confirmed')
+const lo = require("buffer-layout");
+// const BN = require("bn.js");
 
-    // Keys    
-    const secretKeyString = await fs.readFile(PROGRAM_KEYPAIR_PATH, { encoding: 'utf8' })
-    const secretKey = Uint8Array.from(JSON.parse(secretKeyString))
-    const programKeyPair = Keypair.fromSecretKey(secretKey)
-    let programId: PublicKey = programKeyPair.publicKey
 
-    //Account Create
-    const triggerKeyPair = Keypair.generate() // solana new keypair
-    const airdropRequest = await connection.requestAirdrop(
-        triggerKeyPair.publicKey,
-        LAMPORTS_PER_SOL
+
+/**
+ * Vars
+ */
+
+const SOLANA_NETWORK = "devnet";
+
+let connection: Connection;
+let programKeypair: Keypair;
+let programId: PublicKey;
+
+let ringoKeypair: Keypair;
+let georgeKeypair: Keypair;
+let paulKeypair: Keypair;
+let johnKeypair: Keypair;
+
+
+
+/**
+ * Helper functions.
+ */
+
+function createKeypairFromFile(path: string): Keypair {
+    return Keypair.fromSecretKey(
+        Buffer.from(JSON.parse(readFileSync(path, "utf-8")))
     )
-    await connection.confirmTransaction(airdropRequest)
+}
 
-    // Transaction program
-    console.log("--Pinging Program ", programId.toBase58())
-    const instruction = new TransactionInstruction({
-        keys: [{ pubkey: triggerKeyPair.publicKey, isSigner: false, isWritable: true }],
-        programId,
-        data: Buffer.alloc(0)
+
+async function sendLamports(from: Keypair, to: PublicKey, amount: number) {
+    
+    let data = Buffer.alloc(8) // 8 bytes
+    // lo.ns64("value").encode(new BN(amount), data);
+    lo.ns64("value").encode(amount, data);
+
+    let ins = new TransactionInstruction({
+        keys: [
+            {pubkey: from.publicKey, isSigner: true, isWritable: true},
+            {pubkey: to, isSigner: false, isWritable: true},
+            {pubkey: SystemProgram.programId, isSigner: false, isWritable: false},
+        ],
+        programId: programId,
+        data: data,
     })
+
     await sendAndConfirmTransaction(
-        connection,
-        new Transaction().add(instruction),
-        [triggerKeyPair]
-    )
+        connection, 
+        new Transaction().add(ins), 
+        [from]
+    );
+}
+
+
+async function main() {
+    
+    connection = new Connection(
+        `https://api.${SOLANA_NETWORK}.solana.com`, 'confirmed'
+    );
+
+    programKeypair = createKeypairFromFile(
+        path.join(
+            path.resolve(__dirname, '../program/dist/program'), 
+            'program-keypair.json'
+        )
+    );
+    programId = programKeypair.publicKey;
+
+    ringoKeypair = createKeypairFromFile(__dirname + "../program/accounts/ringo.json");
+    johnKeypair = createKeypairFromFile(__dirname + "../program/accounts/john.json");
+  
+    console.log("John sends some SOL to Ringo...");
+    console.log(`   John's public key: ${johnKeypair.publicKey}`);
+    console.log(`   Ringo's public key: ${ringoKeypair.publicKey}`);
+    await sendLamports(johnKeypair, ringoKeypair.publicKey, 5000000);
+
 
 }
+
 
 main().then(
-    ()=>process.exit(),
-    err=>{
-        console.log(err)
-        process.exit(-1)
-    }
-)
+    () => process.exit(),
+    err => {
+        console.error(err);
+        process.exit(-1);
+    },
+  );
