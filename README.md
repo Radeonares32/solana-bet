@@ -1,2 +1,2 @@
 # solana-bet
-Solana Project Dev
+Solana Network Bet Project
