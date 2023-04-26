@@ -1,0 +1,30 @@
+{
+    "compilerOptions": {
+        
+        "lib": [
+            "ESNext"
+        ],
+        "useDefineForClassFields": true,
+        "strict": true,
+        "module": "CommonJS",
+        "alwaysStrict": true,
+        "moduleResolution": "Node",
+        "esModuleInterop": true,
+        "isolatedModules": false,
+        "target": "ES6",
+        "outDir": "./distBack",
+        "rootDir": "./src/server/api",
+        /* "declaration": true,
+        "declarationDir": "./distBack/types", */
+        "allowSyntheticDefaultImports": true,
+        "strictPropertyInitialization": false,
+        "resolveJsonModule": true
+        
+    },
+    "exclude": [
+        "node_modules"
+    ],
+    "include": [
+        "src/server/api/**/*"
+    ]
+}
